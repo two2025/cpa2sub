@@ -103,12 +103,52 @@ body::before {
   min-height: 248px;
 }
 
+.hero-topline {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
 .eyebrow {
-  margin: 0 0 12px;
+  margin: 0;
   color: #2e7566;
   font-size: 0.8rem;
   letter-spacing: 0.28em;
   text-transform: uppercase;
+}
+
+.github-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 7px 11px;
+  border: 1px solid rgba(23, 109, 89, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--text);
+  font-size: 0.86rem;
+  text-decoration: none;
+  white-space: nowrap;
+  backdrop-filter: blur(10px);
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.github-link:hover {
+  transform: translateY(-1px);
+  border-color: rgba(23, 109, 89, 0.32);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.github-link svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  fill: currentColor;
 }
 
 .hero-card h1 {
@@ -752,6 +792,11 @@ td code {
   .provider-entry {
     min-height: 88px;
     padding: 12px 8px 10px;
+  }
+
+  .hero-topline {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .section-head,
