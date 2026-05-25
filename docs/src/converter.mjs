@@ -267,10 +267,6 @@ function parseOpenAIRecord(record, options) {
     throw new Error("缺少 access_token");
   }
 
-  if (typeof record.refresh_token !== "string" || record.refresh_token.trim() === "") {
-    throw new Error("缺少 refresh_token");
-  }
-
   if (typeof record.id_token !== "string" || record.id_token.trim() === "") {
     throw new Error("缺少 id_token");
   }
@@ -511,10 +507,6 @@ function convertSub2ApiOpenAIAccount(account, options) {
     throw new Error("credentials.access_token 为空");
   }
 
-  if (!refreshToken) {
-    throw new Error("credentials.refresh_token 为空，无法生成 Codex CPA 文件");
-  }
-
   if (!idToken) {
     throw new Error("credentials.id_token 为空，无法生成 Codex CPA 文件");
   }
@@ -535,17 +527,19 @@ function convertSub2ApiOpenAIAccount(account, options) {
     planType,
     expiresAt,
     entryLabel: firstNonEmpty(account.name, email),
-    document: stripUnavailable({
-      type: "codex",
-      access_token: accessToken,
-      refresh_token: refreshToken,
-      id_token: idToken,
-      account_id: firstNonEmpty(credentials.chatgpt_account_id),
-      email,
-      expired: expiresAt,
-      last_refresh: normalizeFlexibleTimestamp(extra.last_refresh),
-      plan_type: planType,
-    }),
+    document: {
+      ...stripUnavailable({
+        type: "codex",
+        access_token: accessToken,
+        id_token: idToken,
+        account_id: firstNonEmpty(credentials.chatgpt_account_id),
+        email,
+        expired: expiresAt,
+        last_refresh: normalizeFlexibleTimestamp(extra.last_refresh),
+        plan_type: planType,
+      }),
+      refresh_token: refreshToken ?? "",
+    },
     outputFileName: buildCPAOutputFileName(account.name, email, "codex"),
   };
 }
