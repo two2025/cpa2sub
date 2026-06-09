@@ -94,18 +94,63 @@
               </p>
             </div>
 
-            <div class="dropzone" id="dropzone" tabindex="0" role="button">
-              <p class="dropzone-title" id="dropzone-title">拖拽 CPA `*.json` 到这里</p>
-              <p class="dropzone-copy" id="dropzone-copy">
-                页面不会上传任何认证数据，所有内容都只在当前浏览器中解析。
-              </p>
-              <div class="dropzone-actions">
-                <button class="button button-primary" id="pick-files" type="button">
-                  选择文件
-                </button>
-                <button class="button button-secondary" id="pick-folder" type="button">
-                  选择目录
-                </button>
+            <div class="import-method-switch" role="tablist" aria-label="导入方式">
+              <button
+                class="import-method is-active"
+                type="button"
+                data-import-method="files"
+                aria-selected="true"
+              >
+                文件导入
+              </button>
+              <button
+                class="import-method"
+                type="button"
+                data-import-method="paste"
+                aria-selected="false"
+                tabindex="-1"
+              >
+                粘贴导入
+              </button>
+            </div>
+
+            <div data-import-panel="files">
+              <div class="dropzone" id="dropzone" tabindex="0" role="button">
+                <p class="dropzone-title" id="dropzone-title">拖拽 CPA `*.json` 到这里</p>
+                <p class="dropzone-copy" id="dropzone-copy">
+                  页面不会上传任何认证数据，所有内容都只在当前浏览器中解析。
+                </p>
+                <div class="dropzone-actions">
+                  <button class="button button-primary" id="pick-files" type="button">
+                    选择文件
+                  </button>
+                  <button class="button button-secondary" id="pick-folder" type="button">
+                    选择目录
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div data-import-panel="paste" hidden>
+              <div class="paste-panel">
+                <label class="paste-label" for="paste-input">粘贴 JSON 内容</label>
+                <textarea
+                  class="paste-input"
+                  id="paste-input"
+                  spellcheck="false"
+                  placeholder='{"type":"codex","access_token":"...","id_token":"..."}'
+                ></textarea>
+                <p class="paste-hint" id="paste-hint">
+                  可粘贴单个 JSON、多个连续 JSON，或 JSONL。
+                </p>
+                <div class="paste-actions">
+                  <button class="button button-primary" id="paste-convert" type="button">
+                    转换粘贴内容
+                  </button>
+                  <button class="button button-secondary" id="paste-clear" type="button">
+                    清空输入
+                  </button>
+                </div>
               </div>
             </div>
           </div>

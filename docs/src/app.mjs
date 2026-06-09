@@ -4,6 +4,10 @@ import {
   convertSub2ApiDocument,
 } from "./converter.mjs";
 import { buildZipArchive } from "./archive.mjs";
+import {
+  buildPastedInputItems,
+  parsePastedJsonDocuments,
+} from "./paste-input.mjs";
 
 const MODES = {
   cpaToSub2Api: {
@@ -73,6 +77,7 @@ function createPageState() {
 }
 
 const state = {
+  importMethod: "files",
   isFlipping: false,
   mode: "cpaToSub2Api",
   pages: {
@@ -96,11 +101,17 @@ const elements = {
   heroTags: document.querySelector("#hero-tags"),
   heroTitle: document.querySelector("#hero-title"),
   importCopy: document.querySelector("#import-copy"),
+  importMethodButtons: Array.from(document.querySelectorAll("[data-import-method]")),
+  importPanels: Array.from(document.querySelectorAll("[data-import-panel]")),
   importSubtitle: document.querySelector("#import-subtitle"),
   importTitle: document.querySelector("#import-title"),
   issuesList: document.querySelector("#issues-list"),
   modeButtons: Array.from(document.querySelectorAll("[data-mode-switch]")),
   pageShell: document.querySelector("#page-shell"),
+  pasteClear: document.querySelector("#paste-clear"),
+  pasteConvert: document.querySelector("#paste-convert"),
+  pasteHint: document.querySelector("#paste-hint"),
+  pasteInput: document.querySelector("#paste-input"),
   pickFiles: document.querySelector("#pick-files"),
   pickFolder: document.querySelector("#pick-folder"),
   skippedHint: document.querySelector("#skipped-hint"),
@@ -125,6 +136,10 @@ function prefersReducedMotion() {
 function getFileKey(file) {
   const relative = file.webkitRelativePath || "";
   return `${relative}|${file.name}|${file.size}|${file.lastModified}`;
+}
+
+function getPasteKey(document) {
+  return `paste|${state.mode}|${JSON.stringify(document)}`;
 }
 
 function getTimestampToken(date = new Date()) {
@@ -368,6 +383,20 @@ function renderState() {
   renderSkippedList(pageState);
 }
 
+function renderImportMethod() {
+  elements.importMethodButtons.forEach((button) => {
+    const active = button.getAttribute("data-import-method") === state.importMethod;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-selected", String(active));
+    button.tabIndex = active ? 0 : -1;
+  });
+
+  elements.importPanels.forEach((panel) => {
+    const active = panel.getAttribute("data-import-panel") === state.importMethod;
+    panel.hidden = !active;
+  });
+}
+
 function resetState(mode = state.mode) {
   state.pages[mode] = createPageState();
   if (mode === state.mode) {
@@ -403,6 +432,7 @@ function renderMode() {
     button.tabIndex = active ? 0 : -1;
   });
 
+  renderImportMethod();
   renderState();
 }
 
@@ -460,6 +490,66 @@ async function processFiles(fileList) {
   }
 
   if (state.mode === mode) {
+    renderState();
+  }
+}
+
+function processPastedText(text) {
+  const rawText = String(text || "");
+  if (rawText.trim() === "") {
+    elements.pasteHint.textContent = "请先粘贴一个或多个 JSON。";
+    return;
+  }
+
+  const mode = state.mode;
+  const pageState = getPageState(mode);
+  const parsed = parsePastedJsonDocuments(rawText);
+  const items = buildPastedInputItems(parsed.documents, mode);
+  const converted = [];
+  const skipped = parsed.issues.map((issue) => ({
+    sourceName: issue.label,
+    reason: issue.reason,
+  }));
+
+  pageState.totalImported += items.length + parsed.issues.length;
+
+  for (const item of items) {
+    const key = getPasteKey(item.document);
+
+    if (pageState.seenKeys.has(key)) {
+      skipped.push({
+        sourceName: item.sourceName,
+        reason: "重复导入，已忽略",
+      });
+      continue;
+    }
+
+    pageState.seenKeys.add(key);
+
+    try {
+      if (mode === "cpaToSub2Api") {
+        converted.push(convertCPARecord(item.document, { sourceName: item.sourceName }));
+      } else {
+        const result = convertSub2ApiDocument(item.document, { sourceName: item.sourceName });
+        converted.push(...result.converted);
+        skipped.push(...result.skipped);
+      }
+    } catch (error) {
+      skipped.push({
+        sourceName: item.sourceName,
+        reason: error instanceof Error ? error.message : "无法解析该内容",
+      });
+    }
+  }
+
+  pageState.converted.push(...converted);
+  pageState.skipped.push(...skipped);
+
+  if (state.mode === mode) {
+    elements.pasteHint.textContent = `本次读取 ${items.length} 条内容，生成 ${converted.length} 个结果，跳过 ${skipped.length} 项。`;
+    if (!skipped.length) {
+      elements.pasteInput.value = "";
+    }
     renderState();
   }
 }
@@ -579,6 +669,30 @@ function bindEvents() {
 
   elements.clearResults.addEventListener("click", () => {
     resetState();
+  });
+  elements.importMethodButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const method = button.getAttribute("data-import-method");
+      if (!method || method === state.importMethod) {
+        return;
+      }
+
+      state.importMethod = method;
+      renderImportMethod();
+    });
+  });
+  elements.pasteConvert.addEventListener("click", () => {
+    processPastedText(elements.pasteInput.value);
+  });
+  elements.pasteClear.addEventListener("click", () => {
+    elements.pasteInput.value = "";
+    elements.pasteHint.textContent = "可粘贴单个 JSON、多个连续 JSON，或 JSONL。";
+  });
+  elements.pasteInput.addEventListener("keydown", (event) => {
+    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+      event.preventDefault();
+      processPastedText(elements.pasteInput.value);
+    }
   });
   elements.downloadMerged.addEventListener("click", () => {
     void downloadMergedDocument();
